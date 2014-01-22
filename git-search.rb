@@ -1,36 +1,25 @@
 #!/usr/bin/env ruby
-
+#
+#This source is MIT License 
+#
 require "xmlrpc/client"
 require 'net/http'
 require "yaml"
 require "json"
 
-# wordlist.ymlから検索したい文字列一覧を取得
-s = File.read("wordlist.yml")
-wordlist = YAML::load(s);
 
-#無視すべきword一覧
-s = File.read("ignor_wordlist.yml")
-ignor_wordlist = YAML::load(s);
-
-# はてなから関連するワードを取得
-server = XMLRPC::Client.new("d.hatena.ne.jp", "/xmlrpc")
-server.http_header_extra = {'accept-encoding' => 'identity'} 
-result = server.call("hatena.getSimilarWord", 
-    wordlist
-)
-
-# 関連するワードについて、Githubからリポジトリを検索
-result["wordlist"].each{|word|
-    print word["word"],"\n"   
-    word = word["word"];
+#GIT hubから指定した文字列に対する人気リポジトリを洗い出す。
+#@param  word 検索する文字列
+#@param  ignor_wordlista 無視するワードリスト
+def search_in_git(word, ignor_wordlist)
     # 無視するべきwordかどうか
-    is_ignor = ignor_wordlist["wordlist"].include?(word)
+    is_ignor = ignor_wordlist.include?(word)
 
     if is_ignor
         #無視するべきwordなら、次へ
-        next;
+        return;
     end
+    print "Check Word: "+word+"\n"   
 
     uri_word = URI.encode(word);
     url = "https://api.github.com/search/repositories?q="+uri_word+"&sort=stars&order=desc";
@@ -55,7 +44,7 @@ result["wordlist"].each{|word|
        end
        if data["total_count"]==0
            #0件の場合次へ
-           next
+           return
        end
        #それぞれのItemを取得する
        data["items"].each{|item|
@@ -66,5 +55,33 @@ result["wordlist"].each{|word|
         #エラーが発生した場合
        puts ex
     end
+end
+
+############MAIN LOGIC###############################################
+
+# wordlist.ymlから検索したい文字列一覧を取得
+s = File.read("wordlist.yml")
+wordlist = YAML::load(s);
+
+#無視すべきword一覧
+s = File.read("ignor_wordlist.yml")
+ignor_wordlist = YAML::load(s);
+
+#指定したワード自体で、Githubリポジトリを検索
+wordlist["wordlist"].each{|word|
+    search_in_git(word,ignor_wordlist["wordlist"])
+}
+
+# はてなから関連するワードを取得
+server = XMLRPC::Client.new("d.hatena.ne.jp", "/xmlrpc")
+server.http_header_extra = {'accept-encoding' => 'identity'} 
+result = server.call("hatena.getSimilarWord", 
+    wordlist
+)
+
+# 関連するワードについて、Githubからリポジトリを検索
+result["wordlist"].each{|word|
+    word = word["word"];
+    search_in_git(word,ignor_wordlist["wordlist"])
 }
 
