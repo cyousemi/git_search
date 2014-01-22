@@ -4,7 +4,7 @@ git-search.rb
 概要
 -----------------------------------
 wordlist.ymlに興味のあるワード一覧を登録すると、  
-関連するワードを、[はてなキーワード連想語API|http://developer.hatena.ne.jp/ja/documents/keyword/apis/association]で検索して  
+関連するワードを、[はてなキーワード連想語API](http://developer.hatena.ne.jp/ja/documents/keyword/apis/association)で検索して  
 検索されたワードについて、gitで、スターのランキング順に、URLを取得します。  
 
 
