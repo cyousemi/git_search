@@ -11,13 +11,19 @@ require "json"
 #GIT hubから指定した文字列に対する人気リポジトリを洗い出す。
 #@param  word 検索する文字列
 #@param  ignor_wordlista 無視するワードリスト
-def search_in_git(word, ignor_wordlist)
+#@param  count 何番目か 
+#return int APIへリクエストした数
+def search_in_git(word, ignor_wordlist, count)
+    api_request =0
     # 無視するべきwordかどうか
     is_ignor = ignor_wordlist.include?(word)
 
     if is_ignor
         #無視するべきwordなら、次へ
-        return;
+        return api_request;
+    end
+    if count % 5 == 0 && count !=0
+        sleep(60); #1分に５回までなので 5回目の区切りで、待ちを入れる
     end
     print "Check Word: "+word+"\n"   
 
@@ -40,11 +46,11 @@ def search_in_git(word, ignor_wordlist)
             # cache fileとして、一度取得したワードは保存
             File.binwrite(cache_file,data.to_yaml);
             #認証なしだと1分に5回までなのでsleep
-            sleep(12)
-       end
+            api_request = 1
+        end
        if data["total_count"]==0
            #0件の場合次へ
-           return
+           return api_request
        end
        #それぞれのItemを取得する
        data["items"].each{|item|
@@ -55,6 +61,7 @@ def search_in_git(word, ignor_wordlist)
         #エラーが発生した場合
        puts ex
     end
+    return api_request
 end
 
 ############MAIN LOGIC###############################################
@@ -67,9 +74,11 @@ wordlist = YAML::load(s);
 s = File.read("ignor_wordlist.yml")
 ignor_wordlist = YAML::load(s);
 
+count = 0
+
 #指定したワード自体で、Githubリポジトリを検索
 wordlist["wordlist"].each{|word|
-    search_in_git(word,ignor_wordlist["wordlist"])
+    count = count + search_in_git(word,ignor_wordlist["wordlist"], count)
 }
 
 # はてなから関連するワードを取得
@@ -82,6 +91,6 @@ result = server.call("hatena.getSimilarWord",
 # 関連するワードについて、Githubからリポジトリを検索
 result["wordlist"].each{|word|
     word = word["word"];
-    search_in_git(word,ignor_wordlist["wordlist"])
+    count = count + search_in_git(word,ignor_wordlist["wordlist"], count)
 }
 
